@@ -10,7 +10,7 @@ import (
 type Note struct{
 	ID int `json:"id"`
 	Title string `json:"title"`
-
+	Content string `json:"content"`
 }
 
 var notes = make(map[int]Note)
@@ -18,7 +18,7 @@ var nextID = 1
 
 //response for home url route
 func handlerHome(c *fiber.Ctx)error {
-	return c.SendString("Hello, Fiber!")
+	return c.JSON(notes) //-> bakal ngembaliin json yaitu hashmap dari notes ini
 }
 
 //getting notes with id route
@@ -47,12 +47,35 @@ func handlerCreateNotes(c *fiber.Ctx)error {
 	return c.Status(fiber.StatusCreated).JSON(note)
 }
 
+//handler updating and editing a note
+func handlerUpdateNote(c *fiber.Ctx) error {
+	id, _ := strconv.Atoi(c.Params("id"))
+	note := new(Note)
+	c.BodyParser(note)
+	note.ID = id
+	notes[id] = *note
+	return c.JSON(note)
+}
+
+//handler to delet a note
+func handlertDeleteNote(c *fiber.Ctx)error{
+	idStr := c.Params("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		return c.SendStatus(400)
+	}
+	delete(notes,id)
+	return c.JSON("file with the id "+ strconv.Itoa(id)+"is already deleted")
+}
+
 func main(){
 	//started using fiber backend framework
 	app := fiber.New() // -> fiber declaration make object called "app"
-	app.Get("/",handlerHome)
-	app.Get("/notes/:id",handlerGetNotes)
-	app.Post("/notes",handlerCreateNotes)
+	app.Get("/",handlerHome) //home
+	app.Get("/notes/:id",handlerGetNotes) //getnotes
+	app.Post("/notes",handlerCreateNotes) //create notes
+	app.Put("/notes/:id", handlerUpdateNote) // update notes and content
+	app.Delete("/delete/notes/:id", handlertDeleteNote)//delete a note
 
 	//->error handling
     err := app.Listen(":8181")
