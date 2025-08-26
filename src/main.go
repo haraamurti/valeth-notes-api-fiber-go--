@@ -49,7 +49,10 @@ func handlerCreateNotes(c *fiber.Ctx)error {
 
 //handler updating and editing a note
 func handlerUpdateNote(c *fiber.Ctx) error {
-	id, _ := strconv.Atoi(c.Params("id"))
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return c.SendStatus(400)
+	}
 	note := new(Note)
 	c.BodyParser(note)
 	note.ID = id
