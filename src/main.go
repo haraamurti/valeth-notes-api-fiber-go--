@@ -17,22 +17,40 @@ type Note struct{
 
 var notes = make(map[int]Note)
 var nextID = 1
+var db *gorm.DB
 
 //===============response for home url route=================
-func handlerHome(c *fiber.Ctx)error {
-	return c.JSON(notes) //-> bakal ngembaliin json yaitu hashmap dari notes ini
+// func handlerHome(c *fiber.Ctx)error {
+// 	return c.JSON(notes) //-> bakal ngembaliin json yaitu hashmap dari notes ini
+// }
+
+func handlerHome(c *fiber.Ctx) error {
+	var notes []Note
+	if err := db.Find(&notes).Error; err != nil {
+		return c.Status(500).SendString("Failed to fetch notes")
+	}
+	return c.JSON(notes)
 }
 
 //============getting notes with id route==================
-func handlerGetNotes(c *fiber.Ctx)error {
-	idStr := c.Params("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		return c.SendStatus(400)
-	}
-	note := notes[id]
-	return c.JSON(note)
+func handlerGetNotes(c *fiber.Ctx) error {
+    idStr := c.Params("id")
+    id, err := strconv.Atoi(idStr)
+    if err != nil {
+        return c.Status(fiber.StatusBadRequest).SendString("Invalid ID")
+    }
 
+    var note Note
+    // Use GORM to find by primary key
+    result := db.First(&note, id)
+    if result.Error != nil {
+        if result.Error == gorm.ErrRecordNotFound {
+            return c.Status(fiber.StatusNotFound).SendString("Note not found")
+        }
+        return c.Status(fiber.StatusInternalServerError).SendString("Database error")
+    }
+
+    return c.JSON(note)
 }
 
 //r============response from posting notes or making a note============
@@ -40,6 +58,10 @@ func handlerCreateNotes(c *fiber.Ctx)error {
 	note := new (Note)
 	if err := c.BodyParser(note); err !=nil {
 		return c.Status(fiber.StatusBadRequest).SendString("Invalid request")
+	}
+
+	if err := db.Create(note).Error; err !=nil {
+		return c.Status(fiber.StatusBadRequest).SendString("invalid request")
 	}
 
 	note.ID = nextID
@@ -55,11 +77,36 @@ func handlerUpdateNote(c *fiber.Ctx) error {
 	if err != nil {
 		return c.SendStatus(400)
 	}
-	note := new(Note)
-	c.BodyParser(note)
-	note.ID = id
-	notes[id] = *note
-	return c.JSON(note)
+
+	// Step 2: Parse new content from body
+    var body struct {
+        Content string `json:"content"`
+    }
+
+	if err := c.BodyParser(&body); err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString("invalid Body - neval")
+	}
+
+	var updatednote Note
+	if err := db.First(&updatednote, id).Error; err != nil{
+		return c.Status(fiber.StatusInternalServerError).SendString("error Fetching note -neval")
+	}
+
+	updatednote.Content = body.Content
+
+	// Save the updated note to the database
+	if err := db.Save(&updatednote).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString("error updating note - neval")
+	}
+
+	return c.JSON(updatednote)
+
+	
+
+
+
+
+	
 }
 
 //==============handler to delete a note============
@@ -69,7 +116,7 @@ func handlertDeleteNote(c *fiber.Ctx)error{
 	if err != nil {
 		return c.SendStatus(400)
 	}
-	delete(notes,id)
+	db.Delete(&Note{}, id)
 	return c.JSON("file with the id "+ strconv.Itoa(id)+"is already deleted")
 }
 
@@ -94,13 +141,17 @@ func main(){
     "host=%s user=%s password=%s dbname=%s port=%d sslmode=%s",
     host, user, password, dbname, port, sslmode,)
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})//connecting the database using gorm or opening a database.
+	var err error
+	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})//connecting the database using gorm or opening a database.
 	if err != nil {
 		panic("failed to connect database: " + err.Error())
 	}
 	fmt.Println("Connected to database!")
 	_ = db //assigning the database to ignore because i havent use any datbases yet
 	//---------------------------------------------------------------------
+	
+	db.AutoMigrate(&Note{}) //-> migrating the db from the note strucct
+
 
 	//->error handling
     err = app.Listen(":8181")

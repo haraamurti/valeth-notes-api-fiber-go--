@@ -1,3 +1,16 @@
 {
-    "sqltools.connections": []
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5432,
+            "askForPassword": true,
+            "driver": "PostgreSQL",
+            "name": "valeth-notes-api-golang-fiber-gorm",
+            "group": "valeth",
+            "database": "neval",
+            "username": "postgres",
+            "connectionTimeout": 10
+        }
+    ]
 }
