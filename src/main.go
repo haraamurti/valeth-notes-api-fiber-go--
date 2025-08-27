@@ -5,6 +5,8 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 type Note struct{
@@ -16,12 +18,12 @@ type Note struct{
 var notes = make(map[int]Note)
 var nextID = 1
 
-//response for home url route
+//===============response for home url route=================
 func handlerHome(c *fiber.Ctx)error {
 	return c.JSON(notes) //-> bakal ngembaliin json yaitu hashmap dari notes ini
 }
 
-//getting notes with id route
+//============getting notes with id route==================
 func handlerGetNotes(c *fiber.Ctx)error {
 	idStr := c.Params("id")
 	id, err := strconv.Atoi(idStr)
@@ -33,7 +35,7 @@ func handlerGetNotes(c *fiber.Ctx)error {
 
 }
 
-//response from posting notes or making a note
+//r============response from posting notes or making a note============
 func handlerCreateNotes(c *fiber.Ctx)error {
 	note := new (Note)
 	if err := c.BodyParser(note); err !=nil {
@@ -47,7 +49,7 @@ func handlerCreateNotes(c *fiber.Ctx)error {
 	return c.Status(fiber.StatusCreated).JSON(note)
 }
 
-//handler updating and editing a note
+//=================handler updating and editing a note==============
 func handlerUpdateNote(c *fiber.Ctx) error {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
@@ -60,7 +62,7 @@ func handlerUpdateNote(c *fiber.Ctx) error {
 	return c.JSON(note)
 }
 
-//handler to delet a note
+//==============handler to delete a note============
 func handlertDeleteNote(c *fiber.Ctx)error{
 	idStr := c.Params("id")
 	id, err := strconv.Atoi(idStr)
@@ -80,8 +82,28 @@ func main(){
 	app.Put("/notes/:id", handlerUpdateNote) // update notes and content
 	app.Delete("/delete/notes/:id", handlertDeleteNote)//delete a note
 
+	// -------- Database connection code (add this block) ---------------
+	host := "localhost"
+	user := "postgres"
+	password := "yipikaye2123"
+	port := 5432
+	dbname := "neval" //using database this
+	sslmode := "disable"
+
+	dsn := fmt.Sprintf(
+    "host=%s user=%s password=%s dbname=%s port=%d sslmode=%s",
+    host, user, password, dbname, port, sslmode,)
+
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})//connecting the database using gorm or opening a database.
+	if err != nil {
+		panic("failed to connect database: " + err.Error())
+	}
+	fmt.Println("Connected to database!")
+	_ = db //assigning the database to ignore because i havent use any datbases yet
+	//---------------------------------------------------------------------
+
 	//->error handling
-    err := app.Listen(":8181")
+    err = app.Listen(":8181")
 	if err != nil {
         fmt.Println(err.Error())
     }
