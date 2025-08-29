@@ -156,7 +156,7 @@ func main(){
 	//->error handling
     err = app.Listen(":8181")
 	if err != nil {
-        fmt.Println(err.Error())
+        fmt.Println("error !")
     }
 
 }
